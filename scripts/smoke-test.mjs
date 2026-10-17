@@ -53,8 +53,12 @@ check(true, `“${title}” moved to HIGH`);
 await page.waitForFunction(() => /Saved .*Sarah/.test(document.querySelector(".saved-at")?.textContent || ""), null, { timeout: 10000 });
 check(true, "change auto-saved by Sarah");
 
-// Comment
+// Status buttons on the card
 const card = page.locator(".task-card", { hasText: title });
+await card.locator(".status-opt", { hasText: "In Progress" }).click();
+check(await card.locator(".status-opt.on").innerText() === "In Progress", "status changed to In Progress from the card");
+
+// Comment
 await card.locator(".comments-toggle").click();
 await card.locator("textarea").fill("Smoke test comment");
 await card.locator("button:has-text('Post comment')").click();
@@ -66,6 +70,7 @@ const persisted = page.locator(".prio-group-high .task-card", { hasText: title }
 check(await persisted.count() === 1, "priority persisted after reload");
 await persisted.locator(".comments-toggle").click();
 check(await persisted.locator(".comment", { hasText: "Smoke test comment" }).count() === 1, "comment persisted after reload");
+check((await persisted.locator(".status-opt.on").innerText()) === "In Progress", "status persisted after reload");
 await page.screenshot({ path: `${OUT}/03-edit-desktop.png`, fullPage: true });
 
 // Two editors saving on the same base version → both changes kept (merge)

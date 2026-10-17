@@ -121,3 +121,23 @@ export function PrioritySwitch({ value, onChange, size = "md", locked, label = "
     </div>
   );
 }
+
+/* Status buttons on every card: To Do · Planned · In Progress · Completed. */
+const STATUS_ICON = { "To Do": "circle", "Planned": "calendar", "In Progress": "progress", "Completed": "circle-check" };
+export function StatusPicker({ value, options, styles, onChange, locked, label = "Status" }) {
+  return (
+    <div className={`status-picker${locked ? " locked" : ""}`} role="group" aria-label={label}>
+      {options.map(o => {
+        const on = value === o, st = styles[o];
+        return (
+          <button key={o} type="button" aria-pressed={on} className={`status-opt${on ? " on" : ""}`}
+            style={on ? { background: st.bg, color: st.color } : undefined}
+            title={locked ? "Tap EDIT to change status" : `Set status: ${o}`}
+            onClick={() => onChange(o)}>
+            <i className={`ti ti-${STATUS_ICON[o] || "circle"}`} aria-hidden="true" />{o}
+          </button>
+        );
+      })}
+    </div>
+  );
+}

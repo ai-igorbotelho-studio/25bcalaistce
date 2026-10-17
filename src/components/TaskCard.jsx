@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Badge, PrioritySwitch } from "./ui.jsx";
-import { AREA_STYLE, RESP_STYLE, SPACE_STYLE, STATUS_STYLE, OVERDUE_STYLE, IMG_MAX, taskPriority } from "../config.js";
+import { Badge, PrioritySwitch, StatusPicker } from "./ui.jsx";
+import { AREA_STYLE, RESP_STYLE, SPACE_STYLE, STATUS_STYLE, STATUSES, OVERDUE_STYLE, IMG_MAX, taskPriority } from "../config.js";
 import { fmtDate, fmtDateTime, isOverdue, safeUrl } from "../lib/format.js";
 import { fileToDownscaledDataURL } from "../lib/images.js";
 
@@ -10,7 +10,6 @@ function Badges({ task }) {
       <Badge label={task.area}        style={AREA_STYLE[task.area] || AREA_STYLE.Indoor} />
       <Badge label={task.space}       style={SPACE_STYLE} />
       <Badge label={task.responsible} style={RESP_STYLE[task.responsible] || RESP_STYLE.Tenant} />
-      <Badge label={task.status}      style={STATUS_STYLE[task.status] || STATUS_STYLE["To Do"]} />
       {isOverdue(task) && <Badge label="Overdue" style={OVERDUE_STYLE} />}
     </div>
   );
@@ -46,6 +45,10 @@ export default function TaskCard({ task, editing, editorName, onEdit, onEditOpen
     onEdit(task.id, { priority: p });
     onMoved?.(task, p);
   };
+  const setStatus = (st) => {
+    if (!editing) { onRequestEdit(); return; }
+    if (st !== task.status) onEdit(task.id, { status: st });
+  };
 
   return (
     <article className={`task-card prio-card-${priority.toLowerCase()}`} id={`task-${task.id}`}>
@@ -60,6 +63,8 @@ export default function TaskCard({ task, editing, editorName, onEdit, onEditOpen
 
       <div className="task-body">
         <PrioritySwitch value={priority} onChange={setPriority} size="sm" locked={!editing} label={`Priority for ${task.title}`} />
+        <StatusPicker value={task.status} options={STATUSES.slice(1)} styles={STATUS_STYLE}
+          onChange={setStatus} locked={!editing} label={`Status for ${task.title}`} />
 
         <div className="task-title-row">
           <h3>{task.title}</h3>

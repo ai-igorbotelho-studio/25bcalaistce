@@ -2,11 +2,14 @@
 @font-face{font-family:"tabler-icons";font-style:normal;font-weight:400;font-display:block;src:url("./tabler-icons.woff2") format("woff2")}
 .ti{font-family:"tabler-icons"!important;speak:none;font-style:normal;font-weight:normal;font-variant:normal;text-transform:none;line-height:1;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 .ti-alert-triangle:before{content:"\ea06"}
+.ti-calendar:before{content:"\ea53"}
 .ti-camera:before{content:"\ea54"}
 .ti-camera-plus:before{content:"\ec3b"}
 .ti-check:before{content:"\ea5e"}
 .ti-chevron-down:before{content:"\ea5f"}
 .ti-chevron-up:before{content:"\ea62"}
+.ti-circle:before{content:"\ea6b"}
+.ti-circle-check:before{content:"\ea67"}
 .ti-download:before{content:"\ea96"}
 .ti-external-link:before{content:"\ea99"}
 .ti-eye:before{content:"\ea9a"}
@@ -22,6 +25,7 @@
 .ti-pencil:before{content:"\eb04"}
 .ti-photo-edit:before{content:"\f360"}
 .ti-plus:before{content:"\eb0b"}
+.ti-progress:before{content:"\fa0d"}
 .ti-refresh:before{content:"\eb13"}
 .ti-search:before{content:"\eb1c"}
 .ti-trash:before{content:"\eb41"}

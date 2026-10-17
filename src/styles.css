@@ -256,6 +256,17 @@ a { color: inherit; }
 .prio-switch:not(.locked) .prio-opt:not(.on):hover { background: rgba(0,0,0,.06); color: var(--text); }
 .prio-switch.locked .prio-opt { cursor: pointer; }
 
+/* ── Status buttons ── */
+.status-picker { display: flex; flex-wrap: wrap; gap: 4px; }
+.status-opt {
+  display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;
+  font-size: 11px; font-weight: 600; padding: 6px 10px; min-height: 30px; border-radius: 999px;
+  background: #ece9e1; color: var(--text-2); transition: background .12s, color .12s;
+}
+.status-opt i { font-size: 13px; }
+.status-picker:not(.locked) .status-opt:not(.on):hover { background: #e0ddd3; color: var(--text); }
+@media (pointer: coarse) { .status-opt { min-height: 44px; } }
+
 /* ── Documents ── */
 .content-wrap { max-width: var(--wrap); margin: 0 auto; padding: 28px 16px 48px; }
 .docs { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
@@ -367,7 +378,7 @@ textarea.field { resize: vertical; }
    Keyboard focus is shown by a darker fill instead of an outline.
    ════════════════════════════════════════════════════════════ */
 button, .btn, .btn-xs, .btn-edit, .btn-edit-hero, .btn-done, .hero-btn, .pill, .toggle-btn,
-.prio-switch, .prio-opt, .profile-btn, .icon-btn, .modal-close, .eye-btn, .inline-edit,
+.prio-switch, .prio-opt, .status-opt, .profile-btn, .icon-btn, .modal-close, .eye-btn, .inline-edit,
 .lightbox-close, .link-btn, .comments-toggle, .upload-box, .task-img, .comment-img {
   border: none !important;
   outline: none !important;

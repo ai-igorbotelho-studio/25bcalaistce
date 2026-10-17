@@ -19,6 +19,8 @@
 .ti-file-type-pdf:before{content:"\fb10"}
 .ti-file-type-xls:before{content:"\fb1b"}
 .ti-flame:before{content:"\ec2c"}
+.ti-fold:before{content:"\ed56"}
+.ti-fold-down:before{content:"\ed54"}
 .ti-leaf:before{content:"\ed4f"}
 .ti-link:before{content:"\eade"}
 .ti-list-check:before{content:"\eb6a"}

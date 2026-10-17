@@ -85,6 +85,19 @@ check(await persisted.locator(".comment", { hasText: "Smoke test comment" }).cou
 check((await persisted.locator(".status-select select").inputValue()) === "In Progress", "status persisted after reload");
 await page.screenshot({ path: `${OUT}/03-edit-desktop.png`, fullPage: true });
 
+// Completed band + expand / collapse all
+const doneBefore = await page.locator(".prio-group-done .task-card").count();
+const toFinish = page.locator(".prio-group-low .task-card").first();
+const finishTitle = await toFinish.locator("h3").innerText();
+await toFinish.locator(".status-select select").selectOption("Completed");
+await page.waitForFunction(n => document.querySelectorAll(".prio-group-done .task-card").length === n + 1, doneBefore);
+check(await page.locator(".prio-group-done .task-card", { hasText: finishTitle }).count() === 1, "completed task moves to the Completed band");
+await page.evaluate(() => window.scrollTo(0, 0));
+await page.click(".btn-expand");
+check(await page.locator(".task-grid").count() === 0 && await page.locator(".dash-summary").isVisible(), "Collapse all hides every band and the dashboard");
+await page.click(".btn-expand");
+check(await page.locator(".dash .dash-card").count() === 4 && await page.locator(".prio-group.is-collapsed").count() === 0, "Expand all shows everything again");
+
 // Two editors saving on the same base version → both changes kept (merge)
 const login = async (p) => (await (await fetch(`${BASE}/api/login`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ profile: p, password: PASSWORD }) })).json()).token;
 const [tDave, tIgor] = await Promise.all([login("Dave"), login("Igor")]);

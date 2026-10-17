@@ -24,22 +24,35 @@ const SORTERS = {
 const LAST_PROFILE_KEY = "calais-last-profile";
 const snapshot = (tasks, header, links) => JSON.stringify([tasks, header, links]);
 
-/* One priority band: HIGH (warm) or LOW (sage), each on its own background. */
-function PriorityGroup({ level, tasks, cardProps }) {
-  const high = level === "High";
+/* Task bands, each on its own background:
+   HIGH (terracotta) and LOW (sage) hold open tasks; COMPLETED (cool slate,
+   green accent) holds finished tasks whatever their priority. */
+const GROUPS = {
+  High: { icon: "flame",        title: "High priority", note: "Needs attention first",                          empty: "No open high-priority tasks match the current filters." },
+  Low:  { icon: "leaf",         title: "Low priority",  note: "Can be scheduled after the high-priority items", empty: "No open low-priority tasks match the current filters." },
+  Done: { icon: "circle-check", title: "Completed",     note: "Finished tasks",                                 empty: "No completed tasks yet." },
+};
+
+function TaskGroup({ level, tasks, cardProps, collapsed, onToggle }) {
+  const g = GROUPS[level];
   return (
-    <section className={`prio-group prio-group-${level.toLowerCase()}`} aria-labelledby={`grp-${level}`}>
+    <section className={`prio-group prio-group-${level.toLowerCase()}${collapsed ? " is-collapsed" : ""}`} aria-labelledby={`grp-${level}`}>
       <div className="prio-group-inner">
         <header className="prio-group-head">
           <div className="prio-group-title">
-            <i className={`ti ti-${high ? "flame" : "leaf"}`} aria-hidden="true" />
-            <h2 id={`grp-${level}`}>{high ? "High priority" : "Low priority"}</h2>
+            <i className={`ti ti-${g.icon}`} aria-hidden="true" />
+            <h2 id={`grp-${level}`}>{g.title}</h2>
             <span className="prio-count">{tasks.length}</span>
           </div>
-          <p>{high ? "Needs attention first" : "Can be scheduled after the high-priority items"}</p>
+          <p>{g.note}</p>
+          {onToggle && (
+            <button type="button" className="group-toggle" onClick={onToggle} aria-expanded={!collapsed}>
+              <i className={`ti ti-chevron-${collapsed ? "down" : "up"}`} aria-hidden="true" />{collapsed ? "Show" : "Hide"}
+            </button>
+          )}
         </header>
-        {tasks.length === 0
-          ? <p className="prio-empty">No {high ? "high" : "low"}-priority tasks match the current filters.</p>
+        {collapsed ? null : tasks.length === 0
+          ? <p className="prio-empty">{g.empty}</p>
           : <div className="task-grid">{tasks.map(t => <TaskCard key={t.id} task={t} {...cardProps} />)}</div>}
       </div>
     </section>
@@ -66,6 +79,16 @@ export default function App() {
   const [filters, setFilters] = useState({ area:"All", space:"All", responsible:"All", status:"All" });
   const [query, setQuery]     = useState("");
   const [overdueOnly, setOverdueOnly] = useState(false);
+  /* Collapsed sections (dashboard + each band), remembered per browser. */
+  const SECTIONS = ["dash", "High", "Low", "Done"];
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return { dash: false, High: false, Low: false, Done: false, ...JSON.parse(localStorage.getItem("calais-collapsed") || "{}") }; }
+    catch { return { dash: false, High: false, Low: false, Done: false }; }
+  });
+  useEffect(() => { try { localStorage.setItem("calais-collapsed", JSON.stringify(collapsed)); } catch {} }, [collapsed]);
+  const toggleSection = (k) => setCollapsed(c => ({ ...c, [k]: !c[k] }));
+  const anyExpanded = SECTIONS.some(k => !collapsed[k]);
+  const setAll = (value) => setCollapsed(Object.fromEntries(SECTIONS.map(k => [k, value])));
   const [sort, setSort]       = useState("due");
   const [modal, setModal]     = useState(null);
   const [docModal, setDocModal] = useState(null);
@@ -294,8 +317,10 @@ export default function App() {
       (!overdueOnly || isOverdue(t))
     ).sort(SORTERS[sort]);
   }, [live, filters, query, sort, overdueOnly]);
-  const highTasks = filtered.filter(t => taskPriority(t) === "High");
-  const lowTasks  = filtered.filter(t => taskPriority(t) === "Low");
+  const isDone    = (t) => t.status === "Completed";
+  const highTasks = filtered.filter(t => !isDone(t) && taskPriority(t) === "High");
+  const lowTasks  = filtered.filter(t => !isDone(t) && taskPriority(t) === "Low");
+  const doneTasks = filtered.filter(isDone);
 
   const activeFilters = Object.values(filters).some(v => v !== "All") || query || overdueOnly;
 
@@ -303,8 +328,10 @@ export default function App() {
     editing, editorName, onEdit: editTask, onRequestEdit: requestEdit, onComment: addComment,
     onEditOpen: (t) => setModal({ mode: "edit", task: t }),
     onOpenImage: (src, alt) => setLightbox({ src, alt }),
-    onMoved: (task, p) => {
-      showToast(`“${task.title}” moved to ${p.toUpperCase()} priority.`);
+    onMoved: (task, where) => {
+      const target = where === "Completed" ? "Done" : where.startsWith("HIGH") ? "High" : "Low";
+      setCollapsed(c => ({ ...c, [target]: false }));       // make sure the card is visible
+      showToast(`“${task.title}” moved to ${where}.`);
       setTimeout(() => {   // after re-render the card lives in the other band
         const el = document.getElementById(`task-${task.id}`);
         if (!el) return;
@@ -361,7 +388,7 @@ export default function App() {
       </header>
 
       {/* ── DASHBOARD ── */}
-      <Dashboard tasks={live}
+      <Dashboard tasks={live} collapsed={collapsed.dash} onToggle={() => toggleSection("dash")}
         statusFilter={filters.status} onStatus={(st) => setFilters(f => ({ ...f, status: st }))}
         overdueOnly={overdueOnly} onOverdue={() => setOverdueOnly(v => !v)}
         onJump={(level) => document.getElementById(`grp-${level}`)?.scrollIntoView({ behavior: "smooth", block: "start" })} />
@@ -372,6 +399,9 @@ export default function App() {
           <div className="bar-title">
             <i className="ti ti-list-check" aria-hidden="true" />
             <b>{filtered.length}</b> of {live.length} tasks shown
+            <button type="button" className="btn-expand" onClick={() => setAll(anyExpanded)} aria-label={anyExpanded ? "Collapse all sections" : "Expand all sections"}>
+              <i className={`ti ti-${anyExpanded ? "fold" : "fold-down"}`} aria-hidden="true" />{anyExpanded ? "Collapse all" : "Expand all"}
+            </button>
           </div>
           <div className="stat-actions">
             <span className="saved-at" aria-live="polite">
@@ -426,8 +456,11 @@ export default function App() {
 
       {/* ── PRIORITY GROUPS ── */}
       <main>
-        <PriorityGroup level="High" tasks={highTasks} cardProps={cardProps} />
-        <PriorityGroup level="Low"  tasks={lowTasks}  cardProps={cardProps} />
+        {["High", "Low", "Done"].map(level => (
+          <TaskGroup key={level} level={level} cardProps={cardProps}
+            tasks={level === "High" ? highTasks : level === "Low" ? lowTasks : doneTasks}
+            collapsed={collapsed[level]} onToggle={() => toggleSection(level)} />
+        ))}
 
         {/* ── DOCUMENTS ── */}
         <div className="content-wrap">

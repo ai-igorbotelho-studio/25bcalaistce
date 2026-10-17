@@ -40,7 +40,7 @@ function LegendRow({ k, label, value, icon, onClick, active }) {
   );
 }
 
-export default function Dashboard({ tasks, statusFilter, onStatus, overdueOnly, onOverdue, onJump }) {
+export default function Dashboard({ tasks, statusFilter, onStatus, overdueOnly, onOverdue, onJump, collapsed, onToggle }) {
   const total = tasks.length;
   const high = tasks.filter(t => taskPriority(t) === "High").length;
   const low = total - high;
@@ -50,8 +50,26 @@ export default function Dashboard({ tasks, statusFilter, onStatus, overdueOnly, 
   const overdue = tasks.filter(isOverdue).length;
   const open = total - done;
 
+  if (collapsed) {
+    return (
+      <section className="dash dash-collapsed" aria-label="Task overview (collapsed)">
+        <button type="button" className="dash-card dash-summary" onClick={onToggle} aria-expanded="false">
+          <span className="dash-kicker">Overview</span>
+          <span className="sum-item"><b>{total}</b> tasks</span>
+          <span className="sum-item"><span className="dot dot-high" aria-hidden="true" /><b>{high}</b> high</span>
+          <span className="sum-item"><span className="dot dot-done" aria-hidden="true" /><b>{pctDone}%</b> done</span>
+          <span className={`sum-item${overdue ? " sum-alert" : ""}`}><i className={`ti ti-${overdue ? "alert-triangle" : "circle-check"}`} aria-hidden="true" /><b>{overdue}</b> overdue</span>
+          <span className="sum-show"><i className="ti ti-chevron-down" aria-hidden="true" />Show dashboard</span>
+        </button>
+      </section>
+    );
+  }
+
   return (
     <section className="dash" aria-label="Task overview">
+      <button type="button" className="dash-hide" onClick={onToggle} aria-expanded="true">
+        <i className="ti ti-chevron-up" aria-hidden="true" />Hide dashboard
+      </button>
       {/* Overview — the one hero number */}
       <div className="dash-card dash-overview">
         <div className="dash-kicker">Overview</div>

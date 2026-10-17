@@ -6,6 +6,7 @@ import ExportModal from "./components/ExportModal.jsx";
 import HeaderModal from "./components/HeaderModal.jsx";
 import EditLoginModal from "./components/EditLoginModal.jsx";
 import Lightbox from "./components/Lightbox.jsx";
+import Dashboard from "./components/Dashboard.jsx";
 import { Pill, ConfirmDialog } from "./components/ui.jsx";
 import { AREAS, SPACES, RESPONSIBLE, STATUSES, SORTS, DEFAULT_HEADER, HEADER_EDITORS, taskPriority } from "./config.js";
 import { fmtDateTime, isOverdue } from "./lib/format.js";
@@ -63,6 +64,7 @@ export default function App() {
   /* ── UI ── */
   const [filters, setFilters] = useState({ area:"All", space:"All", responsible:"All", status:"All" });
   const [query, setQuery]     = useState("");
+  const [overdueOnly, setOverdueOnly] = useState(false);
   const [sort, setSort]       = useState("due");
   const [modal, setModal]     = useState(null);
   const [docModal, setDocModal] = useState(null);
@@ -241,22 +243,14 @@ export default function App() {
       (filters.space === "All"       || t.space === filters.space) &&
       (filters.responsible === "All" || t.responsible === filters.responsible) &&
       (filters.status === "All"      || t.status === filters.status) &&
-      (!q || `${t.title} ${t.problem}`.toLowerCase().includes(q))
+      (!q || `${t.title} ${t.problem}`.toLowerCase().includes(q)) &&
+      (!overdueOnly || isOverdue(t))
     ).sort(SORTERS[sort]);
-  }, [live, filters, query, sort]);
+  }, [live, filters, query, sort, overdueOnly]);
   const highTasks = filtered.filter(t => taskPriority(t) === "High");
   const lowTasks  = filtered.filter(t => taskPriority(t) === "Low");
 
-  const stats = useMemo(() => [
-    ["Total",       live.length,                                         "#5F5E5A"],
-    ["High",        live.filter(t => taskPriority(t) === "High").length, "#9A2B0C"],
-    ["Low",         live.filter(t => taskPriority(t) === "Low").length,  "#2F5A16"],
-    ["To do",       live.filter(t => t.status === "To Do").length,       "#5F5E5A"],
-    ["In progress", live.filter(t => t.status === "In Progress").length, "#854F0B"],
-    ["Completed",   live.filter(t => t.status === "Completed").length,   "#3B6D11"],
-    ["Overdue",     live.filter(isOverdue).length,                       "#A32D2D"],
-  ], [live]);
-  const activeFilters = Object.values(filters).some(v => v !== "All") || query;
+  const activeFilters = Object.values(filters).some(v => v !== "All") || query || overdueOnly;
 
   const cardProps = {
     editing, editorName, onEdit: editTask, onRequestEdit: requestEdit,
@@ -319,13 +313,18 @@ export default function App() {
         </div>
       </header>
 
-      {/* ── STAT BAR ── */}
+      {/* ── DASHBOARD ── */}
+      <Dashboard tasks={live}
+        statusFilter={filters.status} onStatus={(st) => setFilters(f => ({ ...f, status: st }))}
+        overdueOnly={overdueOnly} onOverdue={() => setOverdueOnly(v => !v)}
+        onJump={(level) => document.getElementById(`grp-${level}`)?.scrollIntoView({ behavior: "smooth", block: "start" })} />
+
+      {/* ── ACTION BAR ── */}
       <div className="sticky-bar stat-bar">
         <div className="stat-row">
-          <div className="stats">
-            {stats.map(([l, v, c]) => (
-              <div key={l} className="stat"><div className="stat-label">{l}</div><div className="stat-value" style={{ color: c }}>{v}</div></div>
-            ))}
+          <div className="bar-title">
+            <i className="ti ti-list-check" aria-hidden="true" />
+            <b>{filtered.length}</b> of {live.length} tasks shown
           </div>
           <div className="stat-actions">
             <span className="saved-at" aria-live="polite">
@@ -358,7 +357,7 @@ export default function App() {
               </select>
             </label>
             {activeFilters && (
-              <button type="button" className="link-btn" onClick={() => { setFilters({ area:"All", space:"All", responsible:"All", status:"All" }); setQuery(""); }}>
+              <button type="button" className="link-btn" onClick={() => { setFilters({ area:"All", space:"All", responsible:"All", status:"All" }); setQuery(""); setOverdueOnly(false); }}>
                 <i className="ti ti-x" />Clear filters
               </button>
             )}

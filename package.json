@@ -1,0 +1,28 @@
+{
+  "name": "25bcalais",
+  "private": true,
+  "version": "2.0.0",
+  "description": "25B Calais Terrace — property task manager (tenant ↔ owner), deployed on Cloudflare Pages.",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "preview": "npm run build && wrangler pages dev dist",
+    "deploy": "npm run build && wrangler pages deploy dist --project-name 25bcalais",
+    "test": "node scripts/smoke-test.mjs http://127.0.0.1:8788"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+  },
+  "devDependencies": {
+    "@tabler/icons-webfont": "^2.44.0",
+    "esbuild": "^0.25.10",
+    "playwright": "^1.56.1",
+    "wrangler": "^4.40.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "25B Calais Tce Housekeeping",
+  "short_name": "25B Calais",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f2f1ed",
+  "theme_color": "#2d4a2d",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

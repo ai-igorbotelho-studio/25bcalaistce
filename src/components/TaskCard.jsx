@@ -82,15 +82,18 @@ export default function TaskCard({ task, editing, editorName, onEdit, onEditOpen
     if (!editing) { onRequestEdit(); return; }
     if (p === priority) return;
     onEdit(task.id, { priority: p });
-    onMoved?.(task, p);
+    onMoved?.(task, task.status === "Completed" ? "Completed" : `${p.toUpperCase()} priority`);
   };
   const setStatus = (st) => {
     if (!editing) { onRequestEdit(); return; }
-    if (st !== task.status) onEdit(task.id, { status: st });
+    if (st === task.status) return;
+    onEdit(task.id, { status: st });
+    if (st === "Completed") onMoved?.(task, "Completed");
+    else if (task.status === "Completed") onMoved?.(task, `${priority.toUpperCase()} priority`);
   };
 
   return (
-    <article className={`task-card prio-card-${priority.toLowerCase()}`} id={`task-${task.id}`}>
+    <article className={`task-card prio-card-${priority.toLowerCase()}${task.status === "Completed" ? " is-done" : ""}`} id={`task-${task.id}`}>
       {task.image ? (
         <button type="button" className="task-img" onClick={() => onOpenImage(task.image, task.title)} aria-label={`Enlarge photo: ${task.title}`}>
           <img src={task.image} alt={task.title} loading="lazy" decoding="async" />

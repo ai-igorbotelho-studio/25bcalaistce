@@ -58,11 +58,23 @@ const card = page.locator(".task-card", { hasText: title });
 await card.locator(".status-select select").selectOption("In Progress");
 check(await card.locator(".status-select select").inputValue() === "In Progress", "status changed to In Progress from the card dropdown");
 
-// Comment
-await card.locator(".comments-toggle").click();
-await card.locator("textarea").fill("Smoke test comment");
-await card.locator("button:has-text('Post comment')").click();
-await page.waitForTimeout(2500);
+// Comment: EDIT > Comment > Save — stored on the server, author = signed-in profile
+await card.locator(".btn-comment").click();
+await card.locator(".composer textarea").fill("Smoke test comment");
+await card.locator("button:has-text('Save comment')").click();
+await card.locator(".comment-saved").waitFor({ timeout: 10000 });
+check(await card.locator(".comment", { hasText: "Smoke test comment" }).locator("b").innerText() === "Sarah",
+  "comment saved with author Sarah");
+
+// Unsaved draft survives a page reload
+await card.locator(".btn-comment").click();
+await card.locator(".composer textarea").fill("Draft that must not vanish");
+await page.waitForTimeout(300);
+await page.reload({ waitUntil: "networkidle" });
+const draftCard = page.locator(".task-card", { hasText: title });
+check(await draftCard.locator(".composer textarea").inputValue() === "Draft that must not vanish", "unsaved comment draft survives a reload");
+await draftCard.locator(".composer button:has-text('Cancel')").click();
+await page.waitForTimeout(1500);
 
 // Persisted after reload
 await page.reload({ waitUntil: "networkidle" });
@@ -87,6 +99,23 @@ await put(tDave, ts => { ts[0].status = "Planned"; ts[0].updatedAt = now(); ts[0
 const r2 = await put(tIgor, ts => { ts[1].status = "In Progress"; ts[1].updatedAt = now(); ts[1].updatedBy = "Igor"; });
 check(r2.merged === true && r2.state.tasks[0].status === "Planned" && r2.state.tasks[1].status === "In Progress",
   "concurrent saves from Dave and Igor are merged, nothing lost");
+// A comment must survive another editor's stale save (old baseVersion)
+const CID = `smoke-dave-${Date.now()}`;
+const fresh = await (await fetch(`${BASE}/api/state`)).json();
+const cRes = await (await fetch(`${BASE}/api/comment`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${tDave}` },
+  body: JSON.stringify({ taskId: fresh.state.tasks[2].id, text: "Dave's comment", clientId: CID }) })).json();
+const stale = structuredClone(fresh.state); stale.tasks[3].status = "Planned"; stale.tasks[3].updatedAt = now();
+const sRes = await (await fetch(`${BASE}/api/state`, { method: "PUT", headers: { "content-type": "application/json", authorization: `Bearer ${tIgor}` },
+  body: JSON.stringify({ state: stale, baseVersion: fresh.version, meta: {} }) })).json();
+check(cRes.comment?.author === "Dave" && sRes.state.tasks[2].comments.some(c => c.id === CID) && sRes.state.tasks[3].status === "Planned",
+  "comment survives a concurrent stale save, and that save is kept too");
+// Retrying the same comment (e.g. after a dropped connection) stores it once
+const retry = await (await fetch(`${BASE}/api/comment`, { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${tDave}` },
+  body: JSON.stringify({ taskId: fresh.state.tasks[2].id, text: "Dave's comment", clientId: CID }) })).json();
+check(retry.duplicate === true && retry.state.tasks[2].comments.filter(c => c.id === CID).length === 1, "retried comment is not duplicated");
+const anonC = await fetch(`${BASE}/api/comment`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ taskId: 1, text: "x" }) });
+check(anonC.status === 401, "commenting without signing in is refused (401)");
+
 const anon = await fetch(`${BASE}/api/state`, { method: "PUT", headers: { "content-type": "application/json" }, body: "{}" });
 check(anon.status === 401, "saving without signing in is refused (401)");
 

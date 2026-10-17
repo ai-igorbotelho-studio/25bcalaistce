@@ -10,7 +10,8 @@
      • header   — ours if we edited it this session, otherwise theirs.
    ════════════════════════════════════════════════════════════ */
 
-const commentKey = (c) => `${c.date}|${c.author}|${c.text}`;
+// Comments saved via /api/comment carry a unique id; older ones are keyed by content.
+const commentKey = (c) => c.id || `${c.date}|${c.author}|${c.text}`;
 
 export function mergeComments(a = [], b = []) {
   const seen = new Map();

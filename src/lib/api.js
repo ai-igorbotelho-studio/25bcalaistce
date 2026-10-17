@@ -11,9 +11,9 @@ export function saveSession(s) {
   try { s ? localStorage.setItem(SESSION_KEY, JSON.stringify(s)) : localStorage.removeItem(SESSION_KEY); } catch {}
 }
 
-async function call(path, { method = "GET", body, token } = {}) {
+async function call(path, { method = "GET", body, token, keepalive = false } = {}) {
   const res = await fetch(path, {
-    method,
+    method, keepalive,
     headers: {
       ...(body ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -32,4 +32,5 @@ async function call(path, { method = "GET", body, token } = {}) {
 
 export const fetchState = () => call("/api/state");
 export const login = (profile, password) => call("/api/login", { method: "POST", body: { profile, password } });
-export const saveState = (token, payload) => call("/api/state", { method: "PUT", token, body: payload });
+export const saveState = (token, payload, { keepalive = false } = {}) => call("/api/state", { method: "PUT", token, body: payload, keepalive });
+export const postComment = (token, payload) => call("/api/comment", { method: "POST", token, body: payload });

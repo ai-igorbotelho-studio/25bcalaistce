@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Badge, PrioritySwitch, StatusPicker } from "./ui.jsx";
 import { AREA_STYLE, RESP_STYLE, SPACE_STYLE, STATUS_STYLE, STATUSES, OVERDUE_STYLE, IMG_MAX, taskPriority } from "../config.js";
 import { fmtDate, fmtDateTime, isOverdue, safeUrl } from "../lib/format.js";
@@ -15,11 +15,31 @@ function Badges({ task }) {
   );
 }
 
-export default function TaskCard({ task, editing, editorName, onEdit, onEditOpen, onRequestEdit, onOpenImage, onMoved }) {
-  const [expanded, setExpanded] = useState(false);
-  const [newComment, setNewComment] = useState("");
-  const [newImg, setNewImg] = useState("");
+/* Unsent comment drafts are kept in this browser until they're saved,
+   so closing the tab or losing connection never throws away typing. */
+const draftKey = (id) => `calais-comment-draft-${id}`;
+const loadDraft = (id) => { try { return JSON.parse(localStorage.getItem(draftKey(id)) || "null"); } catch { return null; } };
+const storeDraft = (id, d) => {
+  try { d && (d.text || d.image) ? localStorage.setItem(draftKey(id), JSON.stringify(d)) : localStorage.removeItem(draftKey(id)); }
+  catch { /* storage full (large photo) — the draft still lives in memory */ }
+};
+const newClientId = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+export default function TaskCard({ task, editing, editorName, onEdit, onEditOpen, onRequestEdit, onOpenImage, onMoved, onComment }) {
+  const saved = useRef(loadDraft(task.id)).current;
+  const [expanded, setExpanded] = useState(!!saved);
+  const [composing, setComposing] = useState(!!saved);
+  const [newComment, setNewComment] = useState(saved?.text || "");
+  const [newImg, setNewImg] = useState(saved?.image || "");
+  const [clientId, setClientId] = useState(saved?.clientId || newClientId());
   const [imgBusy, setImgBusy] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const textRef = useRef(null);
+
+  // keep the draft in localStorage while typing
+  useEffect(() => { storeDraft(task.id, { text: newComment, image: newImg, clientId }); }, [newComment, newImg, clientId]);
   const priority = taskPriority(task);
   const comments = task.comments || [];
   const links = task.links || [];
@@ -31,13 +51,32 @@ export default function TaskCard({ task, editing, editorName, onEdit, onEditOpen
     setImgBusy(false);
     e.target.value = "";
   };
-  const postComment = () => {
-    if (!newComment.trim() && !newImg) return;
-    onEdit(task.id, { comments: [...comments, {
-      date: new Date().toISOString(), author: editorName,
-      text: newComment.trim(), ...(newImg ? { image: newImg } : {}),
-    }]});
-    setNewComment(""); setNewImg("");
+  const openComposer = () => {
+    if (!editing) { onRequestEdit(); return; }
+    setExpanded(true); setComposing(true); setJustSaved(false);
+    setTimeout(() => textRef.current?.focus(), 30);
+  };
+  const cancelComposer = () => {
+    setComposing(false); setNewComment(""); setNewImg(""); setSendError(null); setClientId(newClientId());
+  };
+  const saveComment = async () => {
+    if (sending || (!newComment.trim() && !newImg)) return;
+    setSending(true); setSendError(null);
+    try {
+      await onComment(task.id, newComment.trim(), newImg, clientId);
+      // only now is it safe to clear the draft
+      setNewComment(""); setNewImg(""); setClientId(newClientId());
+      setComposing(false); setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 4000);
+    } catch (e) {
+      setSendError(e.status === 401
+        ? "Your session expired — sign in again and tap Save. Your comment is kept."
+        : !e.status
+          ? "No connection — not saved yet. Your comment is kept; tap Save again when you're back online."
+          : `${e.message || "Couldn't save."} Your comment is kept — tap Save to try again.`);
+    } finally {
+      setSending(false);
+    }
   };
   const setPriority = (p) => {
     if (!editing) { onRequestEdit(); return; }
@@ -94,16 +133,24 @@ export default function TaskCard({ task, editing, editorName, onEdit, onEditOpen
           <span className="task-updated">Last edited by {task.updatedBy}{task.updatedAt ? " · " + fmtDateTime(task.updatedAt) : ""}</span>
         )}
 
-        <button type="button" onClick={() => setExpanded(e => !e)} className="comments-toggle" aria-expanded={expanded}>
-          <i className={`ti ti-chevron-${expanded ? "up" : "down"}`} />
-          {comments.length} comment{comments.length !== 1 ? "s" : ""}
-        </button>
+        <div className="comments-bar">
+          <button type="button" onClick={() => setExpanded(e => !e)} className="comments-toggle" aria-expanded={expanded}>
+            <i className={`ti ti-chevron-${expanded ? "up" : "down"}`} />
+            {comments.length} comment{comments.length !== 1 ? "s" : ""}
+          </button>
+          {justSaved && <span className="comment-saved" role="status"><i className="ti ti-circle-check" /> Comment saved</span>}
+          {!composing && (
+            <button type="button" className="btn-comment" onClick={openComposer}>
+              <i className="ti ti-message-plus" /> Comment
+            </button>
+          )}
+        </div>
 
         {expanded && (
           <div className="comments">
-            {comments.length === 0 && <p className="muted small">No comments yet.</p>}
+            {comments.length === 0 && !composing && <p className="muted small">No comments yet.</p>}
             {comments.map((c, i) => (
-              <div key={i} className="comment">
+              <div key={c.id || i} className="comment">
                 <div className="comment-head"><b>{c.author}</b><span>{fmtDateTime(c.date)}</span></div>
                 {c.text && <p>{c.text}</p>}
                 {c.image && (
@@ -113,32 +160,38 @@ export default function TaskCard({ task, editing, editorName, onEdit, onEditOpen
                 )}
               </div>
             ))}
+          </div>
+        )}
 
-            {editing ? (
-              <>
-                <div className="muted small">Commenting as <b>{editorName}</b></div>
-                <textarea value={newComment} onChange={e => setNewComment(e.target.value)}
-                  placeholder="Add a comment…" rows={2} className="field" aria-label="New comment" />
-                {newImg && (
-                  <div className="thumb">
-                    <img src={newImg} alt="Attached photo" />
-                    <button type="button" onClick={() => setNewImg("")} aria-label="Remove photo"><i className="ti ti-x" /></button>
-                  </div>
-                )}
-                <div className="row-between">
-                  <label className="link-btn">
-                    <i className={`ti ti-${imgBusy ? "loader-2 spin" : "camera-plus"}`} />
-                    {imgBusy ? "Adding…" : "Add photo"}
-                    <input type="file" accept="image/*" hidden onChange={pickCommentImg} />
-                  </label>
-                  <button type="button" onClick={postComment} className="btn btn-primary btn-sm">Post comment</button>
-                </div>
-              </>
-            ) : (
-              <button type="button" className="link-btn" onClick={onRequestEdit}>
-                <i className="ti ti-lock-open" /> Tap EDIT to add a comment
-              </button>
+        {composing && (
+          <div className="composer">
+            <div className="muted small">
+              {editing ? <>Commenting as <b>{editorName}</b></> : <>Draft kept — tap <b>EDIT</b> to sign in and save it</>}
+            </div>
+            <textarea ref={textRef} value={newComment} onChange={e => { setNewComment(e.target.value); setSendError(null); }}
+              placeholder="Write a comment…" rows={3} className="field" aria-label={`New comment on ${task.title}`}
+              onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveComment(); }} disabled={sending} />
+            {newImg && (
+              <div className="thumb">
+                <img src={newImg} alt="Attached photo" />
+                <button type="button" onClick={() => setNewImg("")} aria-label="Remove photo" disabled={sending}><i className="ti ti-x" /></button>
+              </div>
             )}
+            {sendError && <p className="form-error" role="alert">{sendError}</p>}
+            <div className="row-between">
+              <label className="link-btn">
+                <i className={`ti ti-${imgBusy ? "loader-2 spin" : "camera-plus"}`} />
+                {imgBusy ? "Adding…" : "Add photo"}
+                <input type="file" accept="image/*" hidden onChange={pickCommentImg} disabled={sending} />
+              </label>
+              <div className="composer-actions">
+                <button type="button" onClick={cancelComposer} className="btn btn-sm" disabled={sending}>Cancel</button>
+                <button type="button" onClick={editing ? saveComment : onRequestEdit} className="btn btn-sm btn-primary"
+                  disabled={sending || imgBusy || (!newComment.trim() && !newImg)}>
+                  <i className={`ti ti-${sending ? "loader-2 spin" : "device-floppy"}`} />{sending ? "Saving…" : "Save comment"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

@@ -458,7 +458,7 @@ textarea.field { resize: vertical; }
    Keyboard focus is shown by a darker fill instead of an outline.
    ════════════════════════════════════════════════════════════ */
 button, .btn, .btn-xs, .btn-edit, .btn-edit-hero, .btn-done, .hero-btn, .pill, .toggle-btn,
-.prio-switch, .prio-opt, .status-select, .legend-row, .dash-card, .profile-btn, .icon-btn, .modal-close, .eye-btn, .inline-edit,
+.prio-switch, .prio-opt, .status-select, .btn-comment, .legend-row, .dash-card, .profile-btn, .icon-btn, .modal-close, .eye-btn, .inline-edit,
 .lightbox-close, .link-btn, .comments-toggle, .upload-box, .task-img, .comment-img {
   border: none !important;
   outline: none !important;
@@ -488,3 +488,17 @@ button:focus-visible, .upload-box:focus-within, .link-btn:focus-within { filter:
 .link-btn, .comments-toggle { border-radius: 6px; }
 @media (max-width: 520px) { .hero-shade { padding-bottom: 40px; } }
 @media (max-width: 1132px) { .hero-shade { padding-left: 16px; } }
+
+/* ── Comments: bar, composer, saved confirmation ── */
+.comments-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.btn-comment {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
+  font-size: 12px; font-weight: 600; padding: 6px 12px; min-height: 30px; border-radius: 999px;
+  background: var(--moss-tint); color: var(--moss); border: none;
+}
+.btn-comment i { font-size: 14px; }
+.comment-saved { font-size: 12px; font-weight: 600; color: var(--st-done); display: inline-flex; align-items: center; gap: 4px; }
+.composer { display: flex; flex-direction: column; gap: 8px; background: var(--surface-2); border-radius: 10px; padding: 10px; }
+.composer .field { background: #fff; }
+.composer-actions { display: flex; gap: 6px; }
+@media (pointer: coarse) { .btn-comment { min-height: 44px; } }

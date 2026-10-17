@@ -16,7 +16,7 @@ export function Pill({ label, active, onClick }) {
 export function ToggleBtn({ label, active, bg, color, border, onClick }) {
   return (
     <button type="button" onClick={onClick} aria-pressed={active} className={`toggle-btn${active ? " active" : ""}`}
-      style={active ? { background: bg, color, border: `1.5px solid ${border}` } : {}}>
+      style={active ? { background: bg, color } : {}}>
       {label}
     </button>
   );

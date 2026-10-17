@@ -1,0 +1,23 @@
+// Cloudflare Pages — 25B Calais
+// Static site (dist/) + Pages Functions (functions/) + D1 database.
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "25bcalais",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-09-01",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "calais-25b",
+      "database_id": "ab5e6731-f118-4d71-beda-04f092ca3ff1",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    // Used only for the optional one-time import from the old Supabase site.
+    "SUPABASE_URL": "https://pjhkroskmnggsrrilifn.supabase.co"
+  }
+  // Secrets (set in the dashboard or with `wrangler pages secret put`):
+  //   EDIT_PASSWORD               — shared house password for EDIT mode (required to edit)
+  //   SUPABASE_SERVICE_ROLE_KEY   — optional, imports the old data on first load
+}

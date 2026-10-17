@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local `npm run preview` (never commit .dev.vars)
+EDIT_PASSWORD=change-me
+# SUPABASE_SERVICE_ROLE_KEY=

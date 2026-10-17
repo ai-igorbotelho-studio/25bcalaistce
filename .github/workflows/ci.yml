@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Install Chromium for the smoke test
+        run: npx playwright install --with-deps chromium
+      - name: Start local Cloudflare runtime (wrangler + local D1)
+        run: |
+          printf 'EDIT_PASSWORD=ci-password\n' > .dev.vars
+          npx wrangler d1 migrations apply calais-25b --local
+          npx wrangler pages dev dist --port 8788 > wrangler.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:8788/api/state > /dev/null && break; sleep 1; done
+      - run: node scripts/smoke-test.mjs http://127.0.0.1:8788 ci-password
+      - if: failure()
+        run: cat wrangler.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: test-results/

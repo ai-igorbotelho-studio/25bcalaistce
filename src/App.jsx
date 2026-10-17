@@ -10,7 +10,8 @@ import Dashboard from "./components/Dashboard.jsx";
 import { Pill, ConfirmDialog } from "./components/ui.jsx";
 import { AREAS, SPACES, RESPONSIBLE, STATUSES, SORTS, DEFAULT_HEADER, HEADER_EDITORS, taskPriority } from "./config.js";
 import { fmtDateTime, isOverdue } from "./lib/format.js";
-import { fetchState, saveState, loadSession, saveSession } from "./lib/api.js";
+import { fetchState, saveState, loadSession, saveSession, postComment } from "./lib/api.js";
+import { mergeComments } from "./lib/merge.js";
 import { safeUrl } from "./lib/format.js";
 
 const STATUS_ORDER = { "To Do": 0, "Planned": 1, "In Progress": 2, "Completed": 3 };
@@ -176,7 +177,7 @@ export default function App() {
 
   const scheduleSave = () => {
     clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => persistRef.current(), 900);
+    saveTimer.current = setTimeout(() => persistRef.current(), 250);
   };
   const persistRef = useRef(persist);
   persistRef.current = persist;
@@ -188,6 +189,27 @@ export default function App() {
     editSeq.current++;
     scheduleSave();
   }, [tasks, header, globalLinks, session, loadStatus]);
+
+  /* Leaving the page (close, reload, switch app on a phone): send anything
+     pending immediately. keepalive lets the request finish after the page is gone. */
+  useEffect(() => {
+    const flush = () => {
+      if (!session || inFlight.current || !isDirty()) return;
+      clearTimeout(saveTimer.current); saveTimer.current = null;
+      const payload = {
+        state: { tasks: tasksRef.current, header: headerRef.current, global_links: linksRef.current },
+        baseVersion: versionRef.current,
+        meta: { headerDirty: headerDirty.current, deletedLinkIds: [...deletedLinkIds.current] },
+      };
+      const small = JSON.stringify(payload).length < 60000;   // browsers cap keepalive bodies at 64 KB
+      if (small) saveState(session.token, payload, { keepalive: true }).then(applyServer).catch(() => {});
+      else persistRef.current();
+    };
+    const onVis = () => document.visibilityState === "hidden" && flush();
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onVis);
+    return () => { window.removeEventListener("pagehide", flush); document.removeEventListener("visibilitychange", onVis); };
+  }, [session, applyServer]);
 
   /* Warn before closing the tab with unsaved changes. */
   useEffect(() => {
@@ -232,6 +254,31 @@ export default function App() {
     }
     setModal(null);
   };
+  /* Comments are saved straight to the server (/api/comment), one by one —
+     not via the debounced autosave — and only show as saved once stored. */
+  const addComment = async (taskId, text, image, clientId) => {
+    if (!session) { requestEdit(); throw Object.assign(new Error("Tap EDIT to sign in first."), { status: 401 }); }
+    try {
+      const res = await postComment(session.token, { taskId, text, image, clientId });
+      if (!inFlight.current && !saveTimer.current && !isDirty()) {
+        applyServer(res);                      // nothing pending locally → take the server copy
+      } else {
+        // other edits are pending: add the server's comments to this task only;
+        // the next autosave merges (comments are unioned, so nothing is lost)
+        const srv = (res.state.tasks || []).find(t => String(t.id) === String(taskId));
+        if (srv) setTasks(ts => ts.map(t => (t.id === taskId ? { ...t, comments: mergeComments(t.comments, srv.comments) } : t)));
+        setTimeout(() => persistRef.current(), 0);   // flush the other pending edits now
+      }
+      setLastSaved(res.last_saved); setLastSavedBy(res.last_saved_by);
+      return res;
+    } catch (e) {
+      if (e.status === 401) {
+        setSession(null); saveSession(null);
+        setLoginOpen(true);
+      }
+      throw e;
+    }
+  };
   const deleteTask = (task) => { editTask(task.id, { deleted: true }); setModal(null); showToast(`Deleted “${task.title}”.`); };
 
   /* ── Derived ── */
@@ -253,7 +300,7 @@ export default function App() {
   const activeFilters = Object.values(filters).some(v => v !== "All") || query || overdueOnly;
 
   const cardProps = {
-    editing, editorName, onEdit: editTask, onRequestEdit: requestEdit,
+    editing, editorName, onEdit: editTask, onRequestEdit: requestEdit, onComment: addComment,
     onEditOpen: (t) => setModal({ mode: "edit", task: t }),
     onOpenImage: (src, alt) => setLightbox({ src, alt }),
     onMoved: (task, p) => {

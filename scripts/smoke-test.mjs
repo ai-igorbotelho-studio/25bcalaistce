@@ -55,8 +55,8 @@ check(true, "change auto-saved by Sarah");
 
 // Status buttons on the card
 const card = page.locator(".task-card", { hasText: title });
-await card.locator(".status-opt", { hasText: "In Progress" }).click();
-check(await card.locator(".status-opt.on").innerText() === "In Progress", "status changed to In Progress from the card");
+await card.locator(".status-select select").selectOption("In Progress");
+check(await card.locator(".status-select select").inputValue() === "In Progress", "status changed to In Progress from the card dropdown");
 
 // Comment
 await card.locator(".comments-toggle").click();
@@ -70,7 +70,7 @@ const persisted = page.locator(".prio-group-high .task-card", { hasText: title }
 check(await persisted.count() === 1, "priority persisted after reload");
 await persisted.locator(".comments-toggle").click();
 check(await persisted.locator(".comment", { hasText: "Smoke test comment" }).count() === 1, "comment persisted after reload");
-check((await persisted.locator(".status-opt.on").innerText()) === "In Progress", "status persisted after reload");
+check((await persisted.locator(".status-select select").inputValue()) === "In Progress", "status persisted after reload");
 await page.screenshot({ path: `${OUT}/03-edit-desktop.png`, fullPage: true });
 
 // Two editors saving on the same base version → both changes kept (merge)

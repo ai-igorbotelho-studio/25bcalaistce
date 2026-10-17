@@ -122,22 +122,29 @@ export function PrioritySwitch({ value, onChange, size = "md", locked, label = "
   );
 }
 
-/* Status buttons on every card: To Do · Planned · In Progress · Completed. */
+/* Status dropdown on every card: shows the current status in its colour;
+   open it to pick To Do · Planned · In Progress · Completed.
+   While viewing, it's a button that opens the EDIT sign-in instead. */
 const STATUS_ICON = { "To Do": "circle", "Planned": "calendar", "In Progress": "progress", "Completed": "circle-check" };
 export function StatusPicker({ value, options, styles, onChange, locked, label = "Status" }) {
+  const st = styles[value] || styles["To Do"];
+  const look = { background: st.bg, color: st.color };
+  const icon = <i className={`ti ti-${STATUS_ICON[value] || "circle"}`} aria-hidden="true" />;
+  if (locked) {
+    return (
+      <button type="button" className="status-select" style={look} onClick={() => onChange(value)}
+        aria-label={`${label}: ${value}. Tap EDIT to change`} title="Tap EDIT to change status">
+        {icon}<span>{value}</span><i className="ti ti-chevron-down chev" aria-hidden="true" />
+      </button>
+    );
+  }
   return (
-    <div className={`status-picker${locked ? " locked" : ""}`} role="group" aria-label={label}>
-      {options.map(o => {
-        const on = value === o, st = styles[o];
-        return (
-          <button key={o} type="button" aria-pressed={on} className={`status-opt${on ? " on" : ""}`}
-            style={on ? { background: st.bg, color: st.color } : undefined}
-            title={locked ? "Tap EDIT to change status" : `Set status: ${o}`}
-            onClick={() => onChange(o)}>
-            <i className={`ti ti-${STATUS_ICON[o] || "circle"}`} aria-hidden="true" />{o}
-          </button>
-        );
-      })}
-    </div>
+    <label className="status-select" style={look} title="Change status">
+      {icon}
+      <select value={value} onChange={e => onChange(e.target.value)} aria-label={label}>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+      <i className="ti ti-chevron-down chev" aria-hidden="true" />
+    </label>
   );
 }

@@ -331,16 +331,21 @@ button.legend-row:hover { background: var(--surface-2); }
 .prio-switch:not(.locked) .prio-opt:not(.on):hover { background: rgba(0,0,0,.06); color: var(--text); }
 .prio-switch.locked .prio-opt { cursor: pointer; }
 
-/* ── Status buttons ── */
-.status-picker { display: flex; flex-wrap: wrap; gap: 4px; }
-.status-opt {
-  display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap;
-  font-size: 11px; font-weight: 600; padding: 6px 10px; min-height: 30px; border-radius: 999px;
-  background: #ece9e1; color: var(--text-2); transition: background .12s, color .12s;
+/* ── Status dropdown ── */
+.card-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.card-controls .prio-switch, .card-controls .status-select { align-self: center; }
+.status-select {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
+  border-radius: 999px; padding: 0 12px; min-height: 32px; font-size: 12px; font-weight: 600; cursor: pointer;
 }
-.status-opt i { font-size: 13px; }
-.status-picker:not(.locked) .status-opt:not(.on):hover { background: #e0ddd3; color: var(--text); }
-@media (pointer: coarse) { .status-opt { min-height: 44px; } }
+.status-select > i:first-child { font-size: 14px; }
+.status-select .chev { font-size: 13px; opacity: .75; pointer-events: none; }
+.status-select select {
+  appearance: none; -webkit-appearance: none; background: none; border: none; outline: none;
+  font: inherit; color: inherit; cursor: pointer; padding: 7px 18px 7px 0; margin-right: -18px;
+}
+.status-select:focus-within { filter: brightness(.92); }
+@media (pointer: coarse) { .status-select { min-height: 44px; } }
 
 /* ── Documents ── */
 .content-wrap { max-width: var(--wrap); margin: 0 auto; padding: 28px 16px 48px; }
@@ -453,7 +458,7 @@ textarea.field { resize: vertical; }
    Keyboard focus is shown by a darker fill instead of an outline.
    ════════════════════════════════════════════════════════════ */
 button, .btn, .btn-xs, .btn-edit, .btn-edit-hero, .btn-done, .hero-btn, .pill, .toggle-btn,
-.prio-switch, .prio-opt, .status-opt, .legend-row, .dash-card, .profile-btn, .icon-btn, .modal-close, .eye-btn, .inline-edit,
+.prio-switch, .prio-opt, .status-select, .legend-row, .dash-card, .profile-btn, .icon-btn, .modal-close, .eye-btn, .inline-edit,
 .lightbox-close, .link-btn, .comments-toggle, .upload-box, .task-img, .comment-img {
   border: none !important;
   outline: none !important;

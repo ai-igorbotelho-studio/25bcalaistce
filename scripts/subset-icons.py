@@ -19,7 +19,7 @@ OUT = ROOT / "src/vendor"
 # Icons built from template strings (ti-${...}) that a plain scan can't see.
 DYNAMIC = {"chevron-up", "chevron-down", "camera", "camera-plus", "eye", "eye-off",
            "loader-2", "flame", "leaf", "lock-open", "file-type-xls", "alert-triangle", "pencil",
-           "circle", "calendar", "progress", "circle-check"}
+           "circle", "calendar", "progress", "circle-check", "list-check"}
 
 src = "\n".join(p.read_text() for p in (ROOT / "src").rglob("*.jsx"))
 used = set(re.findall(r"ti-([a-z0-9-]+)", src)) | DYNAMIC

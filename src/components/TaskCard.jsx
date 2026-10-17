@@ -62,9 +62,11 @@ export default function TaskCard({ task, editing, editorName, onEdit, onEditOpen
       )}
 
       <div className="task-body">
-        <PrioritySwitch value={priority} onChange={setPriority} size="sm" locked={!editing} label={`Priority for ${task.title}`} />
-        <StatusPicker value={task.status} options={STATUSES.slice(1)} styles={STATUS_STYLE}
-          onChange={setStatus} locked={!editing} label={`Status for ${task.title}`} />
+        <div className="card-controls">
+          <PrioritySwitch value={priority} onChange={setPriority} size="sm" locked={!editing} label={`Priority for ${task.title}`} />
+          <StatusPicker value={task.status} options={STATUSES.slice(1)} styles={STATUS_STYLE}
+            onChange={setStatus} locked={!editing} label={`Status for ${task.title}`} />
+        </div>
 
         <div className="task-title-row">
           <h3>{task.title}</h3>
